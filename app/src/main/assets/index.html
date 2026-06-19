@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ScanWedge — test du pont</title>
+  <style>
+    :root { --brand:#2563eb; --bg:#f1f5f9; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:system-ui,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--ink); }
+    header { background:var(--brand); color:#fff; padding:14px 16px; }
+    header h1 { margin:0; font-size:1.05rem; }
+    main { padding:16px; }
+    .hint { color:var(--muted); font-size:.9rem; margin:0 0 14px; }
+    .count { font-size:.9rem; color:var(--muted); margin-bottom:12px; }
+    .scan { background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:10px; }
+    .scan .n { color:var(--muted); font-size:.8rem; }
+    .scan code { display:block; word-break:break-all; font-size:1rem; margin:4px 0; }
+    .scan .type { display:inline-block; background:#dbeafe; color:var(--brand); border-radius:999px; padding:2px 10px; font-size:.78rem; font-weight:600; }
+    .empty { color:var(--muted); text-align:center; padding:30px; }
+  </style>
+</head>
+<body>
+  <header><h1>🔌 ScanWedge — test du pont DataWedge</h1></header>
+  <main>
+    <p class="hint">
+      Appuie sur la gâchette de scan du TC22. Chaque scan reçu par Intent doit
+      apparaître ci-dessous avec sa donnée brute et sa symbologie. Si ça s'affiche,
+      le maillon DataWedge → Intent → WebView est validé.
+    </p>
+    <div class="count">Scans reçus : <strong id="count">0</strong></div>
+    <div id="list"><div class="empty">En attente du premier scan…</div></div>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
