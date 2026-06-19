@@ -27,9 +27,12 @@ app/src/main/
 ```
 
 Détails techniques :
-- `MainActivity` charge `file:///android_asset/index.html`, enregistre un
-  `BroadcastReceiver` sur l'action `com.demo.scanwedge.SCAN`, et pousse chaque scan
-  au JS via `window.onScan({ data, type })`.
+- `MainActivity` charge l'appli web déployée `https://www.pep35.cloud/mobile.html`
+  (option B), enregistre un `BroadcastReceiver` sur l'action `com.demo.scanwedge.SCAN`,
+  et pousse chaque scan au JS via `window.onScan({ data, type })`. L'offline est assuré
+  par le service worker de la PWA. *(Pour un offline garanti dès le démarrage à froid,
+  embarquer l'appli dans `assets/` et charger `file:///android_asset/...`.)*
+  Nécessite la permission `INTERNET`.
 - Receiver déclaré `RECEIVER_EXPORTED` (Android 13+) car le broadcast vient d'une
   autre appli (DataWedge).
 - Aucune dépendance AndroidX : `Activity` + `WebView` de la plateforme.

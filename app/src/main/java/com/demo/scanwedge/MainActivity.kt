@@ -53,8 +53,11 @@ class MainActivity : Activity() {
         webView.webViewClient = WebViewClient()
         webView.addJavascriptInterface(WebAppBridge(), "Android")
 
-        // Appli web embarquée dans l'APK → démarrage sans réseau.
-        webView.loadUrl("file:///android_asset/index.html")
+        // Option B : la WebView charge l'appli web déployée. L'offline est assuré
+        // par le service worker de la PWA (une fois la page chargée une 1re fois en
+        // ligne). Pour un offline garanti dès le démarrage à froid, on embarquerait
+        // l'appli dans assets/ (file:///android_asset/...).
+        webView.loadUrl("https://www.pep35.cloud/mobile.html")
     }
 
     /** Transmet un scan au JS : window.onScan({ data, type }). */
