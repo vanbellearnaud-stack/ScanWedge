@@ -1,7 +1,13 @@
-# ScanWedge — wrapper WebView + Intent DataWedge (TC22)
+# RobotScan — wrapper WebView + Intent DataWedge (Zebra)
 
-Wrapper Android minimal qui héberge une appli web dans une **WebView** et lui pousse
-les scans du terminal Zebra via les **Intents DataWedge** (mode Broadcast).
+Wrapper Android **générique** qui héberge n'importe quelle appli web dans une
+**WebView** et lui pousse les scans du terminal Zebra via les **Intents DataWedge**
+(mode Broadcast).
+
+- Nom affiché de l'app : **RobotScan** · paquet : `com.demo.scanwedge` (inchangé,
+  c'est lui qu'on associe dans le profil DataWedge).
+- **URL modifiable à chaud** : appui long sur l'écran → saisie de l'URL (mémorisée),
+  donc le même APK sert pour n'importe quel site, sans rebuild.
 
 > **Étape 1 (ce dépôt)** : dérisquer le pont. L'appli affiche brut chaque scan reçu
 > (donnée + symbologie) pour prouver la chaîne
@@ -83,7 +89,8 @@ Dans l'appli **DataWedge** du TC22 :
 
 ## Tester
 
-1. Lance **ScanWedge** sur le TC22 (la page « test du pont » s'affiche).
+1. Lance **RobotScan** sur le TC22 (nom affiché de l'app ; le paquet reste
+   `com.demo.scanwedge`).
 2. Appuie sur la gâchette et scanne un code-barres.
 3. Le scan doit apparaître à l'écran (donnée brute + symbologie, ex.
    `LABEL-TYPE-EAN13`). Côté logs : `adb logcat -s ScanWedge/web`.
