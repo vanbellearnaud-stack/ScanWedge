@@ -9,6 +9,9 @@ Wrapper Android **générique** qui héberge n'importe quelle appli web dans une
 - **URL modifiable à chaud** : appui long sur l'écran → saisie de l'URL (mémorisée),
   donc le même APK sert pour n'importe quel site, sans rebuild.
 
+> 📖 **Intégrer sa propre app web** : voir [`docs/INTEGRATION.md`](docs/INTEGRATION.md)
+> (contrat `window.onScan`, décodage GS1, config DataWedge, build, rebrand, offline).
+
 > **Étape 1 (ce dépôt)** : dérisquer le pont. L'appli affiche brut chaque scan reçu
 > (donnée + symbologie) pour prouver la chaîne
 > `DataWedge → Intent → BroadcastReceiver → WebView/JS`.
