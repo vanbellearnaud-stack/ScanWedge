@@ -139,6 +139,9 @@ Extras d'intent lus par RobotScan : `com.symbol.datawedge.data_string` (→ `dat
   **mémorisée** dans les préférences). Le même APK sert donc pour n'importe quel site,
   sans reconstruire.
 - **Premier lancement** sans URL → page d'accueil + dialogue de saisie direct.
+- **Par QR code** : dialogue ouvert → **gâchette** sur un QR contenant l'URL → le champ
+  se remplit tout seul (le scan est capté par le dialogue, pas transmis à la page).
+  ⚠️ Nécessite le **décodeur QR Code activé** dans le profil DataWedge.
 - URL sans schéma → `https://` ajouté automatiquement.
 
 Stockage : `SharedPreferences("robotscan")`, clé `start_url`.

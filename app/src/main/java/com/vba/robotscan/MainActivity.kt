@@ -47,13 +47,30 @@ class MainActivity : Activity() {
     private var onErrorPage = false
     private val pendingScans = ArrayList<String>()
 
+    // Quand le dialogue URL est ouvert, un scan (QR contenant l'URL) remplit ce champ
+    // au lieu d'être transmis à la page web.
+    private var urlInput: EditText? = null
+
     private val scanReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action != scanAction) return
             val data = intent.getStringExtra("com.symbol.datawedge.data_string") ?: return
             val type = intent.getStringExtra("com.symbol.datawedge.label_type") ?: ""
-            pushScanToWeb(data, type)
+            handleScan(data, type)
         }
+    }
+
+    /** Aiguille un scan : vers le champ URL si le dialogue est ouvert, sinon vers la page. */
+    private fun handleScan(data: String, type: String) {
+        val field = urlInput
+        if (field != null) {
+            runOnUiThread {
+                field.setText(data.trim())
+                field.setSelection(field.text.length)
+            }
+            return
+        }
+        pushScanToWeb(data, type)
     }
 
     private val webClient = object : WebViewClient() {
@@ -122,16 +139,18 @@ class MainActivity : Activity() {
         }
     }
 
-    /** Boîte de dialogue pour saisir/changer l'URL (validée puis mémorisée). */
+    /** Boîte de dialogue pour saisir/changer l'URL (au clavier ou par scan d'un QR). */
     private fun showUrlDialog() {
         val input = EditText(this).apply {
             inputType = InputType.TYPE_TEXT_VARIATION_URI
-            hint = "https://mon-site.fr/page.html"
+            hint = "https://mon-site.fr  —  ou scanne un QR"
             setText(configuredUrl() ?: "")
             setSelection(text.length)
         }
-        AlertDialog.Builder(this)
+        urlInput = input   // les scans iront dans ce champ tant que le dialogue est ouvert
+        val dialog = AlertDialog.Builder(this)
             .setTitle("URL du site")
+            .setMessage("Tape l'URL, ou scanne un QR code qui la contient (gâchette).")
             .setView(input)
             .setPositiveButton("Charger") { _, _ ->
                 var url = input.text.toString().trim()
@@ -147,7 +166,9 @@ class MainActivity : Activity() {
                 webView.loadUrl(url)
             }
             .setNegativeButton("Annuler", null)
-            .show()
+            .create()
+        dialog.setOnDismissListener { urlInput = null } // on rebascule les scans vers la page
+        dialog.show()
     }
 
     /** Transmet un scan au JS, ou le met en file si la page n'est pas encore prête. */
