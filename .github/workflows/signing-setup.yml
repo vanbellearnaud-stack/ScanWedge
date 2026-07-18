@@ -1,0 +1,49 @@
+name: Signing setup (générer le keystore)
+
+# À lancer UNE fois : onglet Actions → "Signing setup" → Run workflow.
+# Génère un keystore de signature + les valeurs des 4 secrets à créer, et les
+# publie dans un artefact téléchargeable "robotscan-signing".
+# Rien n'est écrit dans le dépôt : le keystore reste secret.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  gen:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Générer keystore + valeurs des secrets
+        run: |
+          PW=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 28)
+          keytool -genkeypair -v -keystore robotscan.jks -alias robotscan \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass "$PW" -keypass "$PW" \
+            -dname "CN=RobotScan, O=VBA, C=FR"
+          base64 -w0 robotscan.jks > keystore.base64
+          {
+            echo "Crée ces 4 secrets dans GitHub :"
+            echo "  Settings > Secrets and variables > Actions > New repository secret"
+            echo
+            echo "KEYSTORE_BASE64   = (colle tout le contenu du fichier keystore.base64 ci-joint)"
+            echo "KEYSTORE_PASSWORD = $PW"
+            echo "KEY_ALIAS         = robotscan"
+            echo "KEY_PASSWORD      = $PW"
+            echo
+            echo "Puis relance le workflow \"Build APK\" pour produire un APK release signé."
+            echo "Supprime cet artefact une fois les secrets créés (il contient la clé)."
+          } > secrets.txt
+
+      - name: Publier l'artefact de signature
+        uses: actions/upload-artifact@v4
+        with:
+          name: robotscan-signing
+          path: |
+            keystore.base64
+            secrets.txt
+          if-no-files-found: error

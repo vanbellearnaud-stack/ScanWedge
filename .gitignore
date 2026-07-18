@@ -6,3 +6,9 @@ local.properties
 .idea/
 .DS_Store
 captures/
+# Signature — ne JAMAIS committer la clé
+*.jks
+*.keystore
+keystore.base64
+keystore.properties
+secrets.txt

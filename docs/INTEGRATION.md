@@ -151,10 +151,15 @@ Pas besoin d'Android Studio : le build tourne sur **GitHub Actions**.
 
 1. Pousse le projet sur GitHub.
 2. Le workflow `.github/workflows/build.yml` compile et publie :
-   - un **artefact** `robotscan-debug-apk` (onglet Actions) ;
-   - une **Release `latest`** → URL permanente
-     `…/releases/latest/download/app-debug.apk` (pratique pour un QR d'install).
-3. Sideload : `adb install -r app-debug.apk` (autoriser les sources inconnues).
+   - un **artefact** `robotscan-apk` (onglet Actions) ;
+   - une **Release `latest`** → URL permanente `…/releases/latest/download/app-release.apk`
+     (pratique pour un QR d'install).
+3. Sideload : `adb install -r app-release.apk` (autoriser les sources inconnues).
+
+**Signature release** : lance une fois le workflow *Signing setup* (génère un keystore),
+crée les 4 secrets `KEYSTORE_BASE64` / `KEYSTORE_PASSWORD` / `KEY_ALIAS` / `KEY_PASSWORD`
+(voir README §Signature), puis relance le build → APK release signé. Sans ces secrets,
+le workflow produit un APK **debug** de repli.
 
 Environnement : JDK 17, Gradle 8.9, AGP 8.5, Kotlin 1.9. `minSdk 24`, `targetSdk 34`,
 **aucune dépendance AndroidX** (Activity + WebView de la plateforme).

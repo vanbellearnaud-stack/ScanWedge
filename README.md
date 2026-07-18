@@ -62,17 +62,37 @@ Détails techniques :
    ```
 2. Le workflow **Build APK** se déclenche au push (ou via l'onglet *Actions →
    Run workflow*).
-3. À la fin, télécharge l'artefact **`robotscan-debug-apk`** (onglet *Actions* → le
-   run → section *Artifacts*). Il contient `app-debug.apk`.
+3. À la fin, télécharge l'artefact **`robotscan-apk`** (onglet *Actions* → le run →
+   section *Artifacts*), ou récupère-le sur la **Release `latest`** :
+   `…/releases/latest/download/app-release.apk`.
 
-L'APK debug est signé avec la clé debug : suffisant pour le sideload de démo.
+Tant que la signature release n'est pas configurée (ci-dessous), le workflow produit
+un **APK debug** de repli ; une fois les secrets créés, il produit un **APK release
+signé** (`app-release.apk`).
 
-## Installer sur le TC22 (sideload)
+## Signature release (recommandé)
+
+Pour un APK signé avec **ta** clé (mises à jour qui s'installent par-dessus, non
+debuggable) :
+
+1. Onglet **Actions → « Signing setup » → Run workflow**. Il génère un keystore et
+   publie un artefact **`robotscan-signing`**.
+2. Télécharge cet artefact → il contient `keystore.base64` et `secrets.txt`.
+3. Crée 4 secrets dans **Settings → Secrets and variables → Actions** (valeurs dans
+   `secrets.txt`) :
+   `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`.
+4. Relance **Build APK** → APK release signé. **Supprime l'artefact `robotscan-signing`**
+   (il contient la clé). Le keystore n'est jamais committé (`.gitignore`).
+
+> Garde le keystore/les secrets en lieu sûr : c'est l'identité de signature de l'app.
+> La perdre = ne plus pouvoir publier de mise à jour installable par-dessus.
+
+## Installer sur le terminal (sideload)
 
 1. Active **Sources inconnues** / autorise l'installation hors store.
 2. Copie l'APK sur le terminal et ouvre-le, ou via ADB :
    ```bash
-   adb install -r app-debug.apk
+   adb install -r app-release.apk
    ```
 
 ## Configurer DataWedge (profil Intent → Broadcast)

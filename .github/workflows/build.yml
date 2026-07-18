@@ -31,22 +31,50 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      - name: Build debug APK
+      # Signature release si les secrets sont configurés (voir workflow
+      # "Signing setup"). Sinon, repli en debug pour rester installable.
+      - name: Décoder le keystore
+        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/robotscan.jks"
+
+      - name: Build release (signé)
+        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        env:
+          KEYSTORE_FILE: ${{ runner.temp }}/robotscan.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: gradle assembleRelease --no-daemon --stacktrace
+
+      - name: Build debug (signature non encore configurée)
+        if: ${{ secrets.KEYSTORE_BASE64 == '' }}
         run: gradle assembleDebug --no-daemon --stacktrace
+
+      - name: Localiser l'APK produit
+        id: apk
+        env:
+          SIGNED: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        run: |
+          if [ "$SIGNED" = "true" ]; then
+            echo "path=app/build/outputs/apk/release/app-release.apk" >> "$GITHUB_OUTPUT"
+          else
+            echo "path=app/build/outputs/apk/debug/app-debug.apk" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: robotscan-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: robotscan-apk
+          path: ${{ steps.apk.outputs.path }}
           if-no-files-found: error
 
-      # Publie l'APK dans une Release "latest" → URL permanente directement
-      # téléchargeable (pour un QR code). Re-pointée à chaque build.
+      # Publie l'APK dans une Release "latest" → URL permanente (QR d'install).
       - name: Publish APK to Release
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          name: Dernier APK (debug)
-          files: app/build/outputs/apk/debug/*.apk
+          name: Dernier APK
+          files: ${{ steps.apk.outputs.path }}
