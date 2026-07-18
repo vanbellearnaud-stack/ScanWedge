@@ -27,7 +27,7 @@
       '<span class="type">' + esc(scan.type || '—') + '</span>';
     list.prepend(div);
 
-    // Vérifie aussi le pont JS → natif (visible dans logcat : tag ScanWedge/web).
+    // Vérifie aussi le pont JS → natif (visible dans logcat : tag RobotScan/web).
     if (window.Android && Android.log) {
       Android.log('scan reçu: ' + scan.data + ' [' + scan.type + ']');
     }

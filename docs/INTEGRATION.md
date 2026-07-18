@@ -4,7 +4,7 @@ RobotScan est un **wrapper Android générique** pour terminaux de scan (Zebra &
 Il ouvre une **WebView** sur l'URL de ton choix et pousse chaque scan matériel à ta
 page web. Côté web, tu n'as **qu'une seule fonction à implémenter**.
 
-- Paquet Android : `com.demo.scanwedge` · Nom affiché : `RobotScan`
+- Paquet Android : `com.vba.robotscan` · Nom affiché : `RobotScan`
 - Le scan arrive via **DataWedge en mode Intent** (bloc atomique, pas d'émulation
   clavier → pas d'entrelacement).
 - Rien à installer côté web : ta page peut être hébergée n'importe où (HTTP/HTTPS).
@@ -67,7 +67,7 @@ Un objet `Android` est exposé pour logguer côté logcat :
 
 ```js
 if (window.Android && Android.log) Android.log('coucou depuis le web');
-// → adb logcat -s ScanWedge/web
+// → adb logcat -s RobotScan/web
 ```
 
 ---
@@ -116,11 +116,11 @@ function parseGs1(raw) {
 
 Dans l'appli **DataWedge** du terminal, crée un profil :
 
-1. **Applications associées** → paquet **`com.demo.scanwedge`**, activité `*`.
+1. **Applications associées** → paquet **`com.vba.robotscan`**, activité `*`.
 2. **Entrée code-barres** : activée. Décodeurs voulus (EAN-13, Code 128/39, Data
    Matrix, **GS1 DataMatrix** + parsing GS1 si besoin).
 3. **Sortie Intent** : activée
-   - Action : **`com.demo.scanwedge.SCAN`**
+   - Action : **`com.vba.robotscan.SCAN`**
    - Catégorie : **`android.intent.category.DEFAULT`**
    - Mode de livraison : **Broadcast intent**
 4. **Sortie en frappe clavier** : **désactivée**.
@@ -141,7 +141,7 @@ Extras d'intent lus par RobotScan : `com.symbol.datawedge.data_string` (→ `dat
 - **Premier lancement** sans URL → page d'accueil + dialogue de saisie direct.
 - URL sans schéma → `https://` ajouté automatiquement.
 
-Stockage : `SharedPreferences("scanwedge")`, clé `start_url`.
+Stockage : `SharedPreferences("robotscan")`, clé `start_url`.
 
 ---
 
@@ -151,7 +151,7 @@ Pas besoin d'Android Studio : le build tourne sur **GitHub Actions**.
 
 1. Pousse le projet sur GitHub.
 2. Le workflow `.github/workflows/build.yml` compile et publie :
-   - un **artefact** `scanwedge-debug-apk` (onglet Actions) ;
+   - un **artefact** `robotscan-debug-apk` (onglet Actions) ;
    - une **Release `latest`** → URL permanente
      `…/releases/latest/download/app-debug.apk` (pratique pour un QR d'install).
 3. Sideload : `adb install -r app-debug.apk` (autoriser les sources inconnues).
@@ -204,8 +204,8 @@ La WebView s'appuie sur l'**Android System WebView** (Chromium) du terminal :
 ## 9. Débogage
 
 ```bash
-adb logcat -s ScanWedge/web        # logs poussés via Android.log(...)
-adb shell am broadcast -a com.demo.scanwedge.SCAN \
+adb logcat -s RobotScan/web        # logs poussés via Android.log(...)
+adb shell am broadcast -a com.vba.robotscan.SCAN \
   --es com.symbol.datawedge.data_string "3401579843411" \
   --es com.symbol.datawedge.label_type "LABEL-TYPE-EAN13"   # simuler un scan sans matériel
 ```

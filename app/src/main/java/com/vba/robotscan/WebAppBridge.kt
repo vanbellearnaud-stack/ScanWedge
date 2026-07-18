@@ -1,15 +1,15 @@
-package com.demo.scanwedge
+package com.vba.robotscan
 
 import android.util.Log
 import android.webkit.JavascriptInterface
 
 /**
  * Pont JS → natif. Exposé à la page sous le nom global `Android`.
- * Étape 1 : un simple log pour vérifier le sens JS → natif.
+ * Simple log pour tracer le sens JS → natif (adb logcat -s RobotScan/web).
  */
 class WebAppBridge {
     @JavascriptInterface
     fun log(msg: String) {
-        Log.d("ScanWedge/web", msg)
+        Log.d("RobotScan/web", msg)
     }
 }

@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.demo.scanwedge"
+    namespace = "com.vba.robotscan"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.demo.scanwedge"
+        applicationId = "com.vba.robotscan"
         minSdk = 24
         targetSdk = 34
         versionCode = 1

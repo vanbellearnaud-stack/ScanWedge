@@ -4,8 +4,8 @@ Wrapper Android **générique** qui héberge n'importe quelle appli web dans une
 **WebView** et lui pousse les scans du terminal Zebra via les **Intents DataWedge**
 (mode Broadcast).
 
-- Nom affiché de l'app : **RobotScan** · paquet : `com.demo.scanwedge` (inchangé,
-  c'est lui qu'on associe dans le profil DataWedge).
+- Nom affiché de l'app : **RobotScan** · paquet : `com.vba.robotscan`
+  (c'est lui qu'on associe dans le profil DataWedge).
 - **URL modifiable à chaud** : appui long sur l'écran → saisie de l'URL (mémorisée),
   donc le même APK sert pour n'importe quel site, sans rebuild.
 
@@ -28,8 +28,8 @@ construction* l'entrelacement de l'émulation clavier. Les fichiers web sont emb
 ```
 app/src/main/
   AndroidManifest.xml
-  java/com/demo/scanwedge/MainActivity.kt   WebView + BroadcastReceiver + pont
-  java/com/demo/scanwedge/WebAppBridge.kt    pont JS → natif (@JavascriptInterface)
+  java/com/vba/robotscan/MainActivity.kt    WebView + BroadcastReceiver + pont
+  java/com/vba/robotscan/WebAppBridge.kt     pont JS → natif (@JavascriptInterface)
   assets/index.html, app.js                  appli web (étape 1)
   res/...                                     icône, libellés
 .github/workflows/build.yml                  build cloud → APK debug en artefact
@@ -42,7 +42,7 @@ Détails techniques :
 - **Robustesse** : URL validée (`URLUtil`), page de repli « Réessayer » en cas d'échec
   réseau (`onReceivedError`), et **file d'attente des scans** tant que la page n'est pas
   chargée (`pageReady` / `pendingScans`, vidée dans `onPageFinished`) → aucun scan perdu.
-- Enregistre un `BroadcastReceiver` sur l'action `com.demo.scanwedge.SCAN` et pousse
+- Enregistre un `BroadcastReceiver` sur l'action `com.vba.robotscan.SCAN` et pousse
   chaque scan au JS via `window.onScan({ data, type })`. L'offline dépend du site chargé
   (service worker de la PWA). *(Pour un offline garanti à froid, embarquer le site dans
   `assets/` et charger `file:///android_asset/...`.)*
@@ -55,14 +55,14 @@ Détails techniques :
 
 1. Crée un dépôt GitHub et pousse ce projet :
    ```bash
-   git init && git add . && git commit -m "ScanWedge étape 1"
+   git init && git add . && git commit -m "RobotScan"
    git branch -M main
    git remote add origin <url-de-ton-depot>
    git push -u origin main
    ```
 2. Le workflow **Build APK** se déclenche au push (ou via l'onglet *Actions →
    Run workflow*).
-3. À la fin, télécharge l'artefact **`scanwedge-debug-apk`** (onglet *Actions* → le
+3. À la fin, télécharge l'artefact **`robotscan-debug-apk`** (onglet *Actions* → le
    run → section *Artifacts*). Il contient `app-debug.apk`.
 
 L'APK debug est signé avec la clé debug : suffisant pour le sideload de démo.
@@ -79,14 +79,14 @@ L'APK debug est signé avec la clé debug : suffisant pour le sideload de démo.
 
 Dans l'appli **DataWedge** du TC22 :
 
-1. **⋮ → Nouveau profil** (*New profile*) → `ScanWedge`.
+1. **⋮ → Nouveau profil** (*New profile*) → `RobotScan`.
 2. **Applications associées** (*Associated apps*) → **Nouvelle application/activité**
-   → paquet **`com.demo.scanwedge`**, activité **`*`**.
+   → paquet **`com.vba.robotscan`**, activité **`*`**.
 3. **Entrée code-barres** (*Barcode input*) : **Activé**. Décodeurs à activer :
    `EAN-13`, `Code 128`, `Code 39`, `Data Matrix` (+ **GS1 DataMatrix** et le parsing
    GS1 si tu testes des codes GS1).
 4. **Sortie Intent** (*Intent output*) : **Activé**
-   - **Action de l'intent** (*Intent action*) : `com.demo.scanwedge.SCAN`
+   - **Action de l'intent** (*Intent action*) : `com.vba.robotscan.SCAN`
    - **Catégorie** (*Intent category*) : `android.intent.category.DEFAULT`
    - **Mode de livraison** (*Intent delivery*) : **Broadcast intent**
 5. **Désactive** la **Sortie en frappe clavier** (*Keystroke output*) pour ce profil.
@@ -97,9 +97,9 @@ Dans l'appli **DataWedge** du TC22 :
 ## Tester
 
 1. Lance **RobotScan** sur le TC22 (nom affiché de l'app ; le paquet reste
-   `com.demo.scanwedge`).
+   `com.vba.robotscan`).
 2. Appuie sur la gâchette et scanne un code-barres.
 3. Le scan doit apparaître à l'écran (donnée brute + symbologie, ex.
-   `LABEL-TYPE-EAN13`). Côté logs : `adb logcat -s ScanWedge/web`.
+   `LABEL-TYPE-EAN13`). Côté logs : `adb logcat -s RobotScan/web`.
 
 Si le scan s'affiche → le pont est validé, on peut passer à l'étape 2.

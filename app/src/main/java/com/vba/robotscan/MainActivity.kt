@@ -1,4 +1,4 @@
-package com.demo.scanwedge
+package com.vba.robotscan
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -35,11 +35,11 @@ class MainActivity : Activity() {
     private lateinit var webView: WebView
 
     // Doit correspondre EXACTEMENT à l'action configurée dans le profil DataWedge
-    // (Sortie Intent, mode Broadcast, Intent action = com.demo.scanwedge.SCAN).
-    private val scanAction = "com.demo.scanwedge.SCAN"
+    // (Sortie Intent, mode Broadcast, Intent action = com.vba.robotscan.SCAN).
+    private val scanAction = "com.vba.robotscan.SCAN"
 
     // URL chargée par la WebView, mémorisée et modifiable à chaud (appui long).
-    private val prefs by lazy { getSharedPreferences("scanwedge", MODE_PRIVATE) }
+    private val prefs by lazy { getSharedPreferences("robotscan", MODE_PRIVATE) }
     private fun configuredUrl(): String? = prefs.getString("start_url", null)?.takeIf { it.isNotBlank() }
 
     // État de chargement + file d'attente des scans reçus avant que la page soit prête.

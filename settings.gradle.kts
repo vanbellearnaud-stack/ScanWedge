@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ScanWedge"
+rootProject.name = "RobotScan"
 include(":app")
