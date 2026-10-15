@@ -3,15 +3,22 @@ package com.vba.robotscan
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.ActivityNotFoundException
 import android.content.BroadcastReceiver
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Parcelable
+import android.provider.MediaStore
 import android.text.InputType
 import android.webkit.URLUtil
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
@@ -19,6 +26,7 @@ import android.webkit.WebViewClient
 import android.widget.EditText
 import android.widget.Toast
 import org.json.JSONObject
+import java.io.File
 
 /**
  * RobotScan — wrapper WebView générique pour terminaux Zebra.
@@ -106,6 +114,79 @@ class MainActivity : Activity() {
     private fun isHttp(url: String?): Boolean =
         url != null && (url.startsWith("http://") || url.startsWith("https://"))
 
+    // ── L'APPAREIL PHOTO pour la page web (<input type="file" accept="image/*" capture>) ──
+    // Sans WebChromeClient, la WebView ignore ce champ : rien ne s'ouvre. Ici : avec « capture », l'appareil photo
+    // directement ; sans, le choix entre l'appareil photo et les images du terminal. La photo est écrite par
+    // l'appareil photo dans le cache de RobotScan (PhotoProvider), puis rendue à la page. Aucune permission à demander :
+    // c'est l'appareil photo du terminal qui prend la photo (RobotScan ne déclare pas CAMERA, sinon il devrait l'obtenir).
+    private val choixFichier = 41
+    private var fichierEnAttente: ValueCallback<Array<Uri>>? = null
+    private var photoEnCours: Uri? = null
+
+    private val chromeClient = object : WebChromeClient() {
+        override fun onShowFileChooser(
+            view: WebView?,
+            filePathCallback: ValueCallback<Array<Uri>>?,
+            fileChooserParams: WebChromeClient.FileChooserParams?
+        ): Boolean {
+            fichierEnAttente?.onReceiveValue(null)   // un choix resté en suspens : la WebView n'en rouvrirait plus
+            fichierEnAttente = filePathCallback
+            val photo = intentionPhoto()
+            val images = try { fileChooserParams?.createIntent() } catch (_: Exception) { null }
+            val intention = when {
+                fileChooserParams?.isCaptureEnabled == true -> photo
+                images != null -> Intent.createChooser(images, "Photo").putExtra(Intent.EXTRA_INITIAL_INTENTS, arrayOf<Parcelable>(photo))
+                else -> photo
+            }
+            return try {
+                startActivityForResult(intention, choixFichier)
+                true
+            } catch (_: ActivityNotFoundException) {
+                Toast.makeText(this@MainActivity, "Pas d'appareil photo sur ce terminal", Toast.LENGTH_SHORT).show()
+                fichierEnAttente = null
+                filePathCallback?.onReceiveValue(null)
+                true
+            }
+        }
+    }
+
+    private fun dossierPhotos(): File = File(cacheDir, "photos").apply { mkdirs() }
+
+    /** L'appareil photo, qui écrira la photo à une adresse de PhotoProvider (les photos de plus d'un jour sont effacées). */
+    private fun intentionPhoto(): Intent {
+        val dossier = dossierPhotos()
+        val hier = System.currentTimeMillis() - 24L * 3600 * 1000
+        dossier.listFiles()?.forEach { if (it.lastModified() < hier) it.delete() }
+        val uri = Uri.parse("content://$packageName.photos/photo-${System.currentTimeMillis()}.jpg")
+        photoEnCours = uri
+        return Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+            putExtra(MediaStore.EXTRA_OUTPUT, uri)
+            clipData = ClipData.newRawUri("photo", uri)   // (la permission d'écrire suit le ClipData)
+            addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode != choixFichier) {
+            super.onActivityResult(requestCode, resultCode, data)
+            return
+        }
+        val rappel = fichierEnAttente
+        fichierEnAttente = null
+        var resultat: Array<Uri>? = null
+        if (resultCode == RESULT_OK) {
+            val choisie = data?.data
+            val photo = photoEnCours
+            if (choisie != null) {
+                resultat = arrayOf(choisie)   // une image prise dans le terminal
+            } else if (photo != null && File(dossierPhotos(), photo.lastPathSegment ?: "").length() > 0) {
+                resultat = arrayOf(photo)     // la photo que l'appareil photo vient d'écrire
+            }
+        }
+        photoEnCours = null
+        rappel?.onReceiveValue(resultat)
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -121,6 +202,7 @@ class MainActivity : Activity() {
             allowContentAccess = true
         }
         webView.webViewClient = webClient
+        webView.webChromeClient = chromeClient   // l'appareil photo des champs <input type="file"> (voir onShowFileChooser)
         webView.addJavascriptInterface(WebAppBridge(), "Android")
 
         // Appui long n'importe où → changer l'URL du site (mémorisée, sans rebuild).

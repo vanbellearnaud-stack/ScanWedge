@@ -21,5 +21,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Les photos prises pour une page web : l'appareil photo y écrit, la WebView les lit (PhotoProvider.kt). -->
+        <provider
+            android:name=".PhotoProvider"
+            android:authorities="${applicationId}.photos"
+            android:exported="false"
+            android:grantUriPermissions="true" />
     </application>
 </manifest>
