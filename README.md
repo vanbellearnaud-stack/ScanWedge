@@ -48,6 +48,14 @@ Détails techniques :
   `assets/` et charger `file:///android_asset/...`.)*
 - Receiver déclaré `RECEIVER_EXPORTED` (Android 13+) car le broadcast vient d'une
   autre appli (DataWedge).
+- **Appareil photo** pour les pages web : un `WebChromeClient` répond aux champs
+  `<input type="file" accept="image/*">` (`onShowFileChooser`). Avec l'attribut
+  `capture`, l'appareil photo s'ouvre directement ; sans, le choix entre l'appareil
+  photo et les images du terminal. L'appareil photo écrit la photo dans le cache de
+  l'appli par `PhotoProvider` (content://com.vba.robotscan.photos/…, non exporté,
+  photos de plus d'un jour effacées), puis elle est rendue à la page. Pas de
+  permission `CAMERA` : c'est l'appareil photo du terminal qui prend la photo
+  (déclarer `CAMERA` obligerait à la demander, sans quoi l'appareil photo refuse).
 - Aucune dépendance AndroidX : `Activity` + `WebView` de la plateforme.
   `minSdk 24`, `targetSdk 34`.
 
