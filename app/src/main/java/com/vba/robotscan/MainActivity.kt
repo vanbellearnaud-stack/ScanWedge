@@ -114,7 +114,7 @@ class MainActivity : Activity() {
     private fun isHttp(url: String?): Boolean =
         url != null && (url.startsWith("http://") || url.startsWith("https://"))
 
-    // ── L'APPAREIL PHOTO pour la page web (<input type="file" accept="image/*" capture>) ──
+    // ── L'APPAREIL PHOTO pour la page web (un champ photo, input type="file" avec capture) ──
     // Sans WebChromeClient, la WebView ignore ce champ : rien ne s'ouvre. Ici : avec « capture », l'appareil photo
     // directement ; sans, le choix entre l'appareil photo et les images du terminal. La photo est écrite par
     // l'appareil photo dans le cache de RobotScan (PhotoProvider), puis rendue à la page. Aucune permission à demander :

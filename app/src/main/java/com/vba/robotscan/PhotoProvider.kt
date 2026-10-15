@@ -11,7 +11,7 @@ import java.io.File
 import java.io.FileNotFoundException
 
 /**
- * Les photos prises pour une page web (<input type="file" accept="image/*" capture>) : l'appareil photo écrit dans
+ * Les photos prises pour une page web (un champ photo, input type="file" avec capture) : l'appareil photo écrit dans
  * cache/photos/photo-<instant>.jpg par l'adresse content://<paquet>.photos/photo-<instant>.jpg, puis la WebView lit la
  * photo par la même adresse. C'est ce que fait le FileProvider d'AndroidX, en quelques lignes : RobotScan n'a aucune
  * dépendance. Non exporté : seul l'appareil photo, à qui MainActivity donne la permission pour cette photo, y écrit.
