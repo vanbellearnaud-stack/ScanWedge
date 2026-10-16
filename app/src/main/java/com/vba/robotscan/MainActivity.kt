@@ -55,6 +55,12 @@ class MainActivity : Activity() {
     private var onErrorPage = false
     private val pendingScans = ArrayList<String>()
 
+    // Relances automatiques après un échec de chargement. À froid et hors-ligne, la
+    // toute 1re navigation échoue souvent avant que le service worker du site ne
+    // prenne la main ; une relance depuis la page aboutit alors (offline compris).
+    private var autoRetries = 0
+    private val retryDelaysMs = longArrayOf(400, 1200, 3000)
+
     // Quand le dialogue URL est ouvert, un scan (QR contenant l'URL) remplit ce champ
     // au lieu d'être transmis à la page web.
     private var urlInput: EditText? = null
@@ -94,6 +100,7 @@ class MainActivity : Activity() {
             // ne rendent pas la page "prête" : les scans restent en file.
             if (!onErrorPage && isHttp(url)) {
                 pageReady = true
+                autoRetries = 0
                 flushPendingScans()
             }
         }
@@ -106,7 +113,12 @@ class MainActivity : Activity() {
             if (request?.isForMainFrame == true) {
                 onErrorPage = true
                 pageReady = false
-                showErrorPage()
+                if (autoRetries < retryDelaysMs.size) {
+                    showRetryPage(retryDelaysMs[autoRetries])
+                    autoRetries++
+                } else {
+                    showErrorPage()
+                }
             }
         }
     }
@@ -245,6 +257,7 @@ class MainActivity : Activity() {
                     return@setPositiveButton
                 }
                 prefs.edit().putString("start_url", url).apply()
+                autoRetries = 0
                 webView.loadUrl(url)
             }
             .setNegativeButton("Annuler", null)
@@ -278,6 +291,15 @@ class MainActivity : Activity() {
         webView.loadDataWithBaseURL("about:error", errorHtml(configuredUrl() ?: ""), "text/html", "UTF-8", null)
     }
 
+    /**
+     * Écran « Chargement… » qui relance la navigation depuis la page après [delayMs],
+     * exactement comme un clic sur « Réessayer » (navigation initiée par la page).
+     */
+    private fun showRetryPage(delayMs: Long) {
+        val url = configuredUrl() ?: return showErrorPage()
+        webView.loadDataWithBaseURL("about:retry", retryHtml(url, delayMs), "text/html", "UTF-8", null)
+    }
+
     private fun pageShell(body: String): String =
         """
         <!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
@@ -306,13 +328,23 @@ class MainActivity : Activity() {
         """.trimIndent()
     )
 
+    private fun retryHtml(url: String, delayMs: Long): String = pageShell(
+        """
+        <div class="ico">🤖</div>
+        <h1>Chargement…</h1>
+        <p class="url">$url</p>
+        <script>setTimeout(function(){ location.replace(${JSONObject.quote(url)}); }, $delayMs);</script>
+        """.trimIndent()
+    )
+
     private fun errorHtml(url: String): String = pageShell(
         """
         <div class="ico">📡</div>
         <h1>Connexion impossible</h1>
         <p class="url">${url.ifBlank { "—" }}</p>
         <a class="btn" href="${url.ifBlank { "about:welcome" }}">Réessayer</a>
-        <p class="hint">Appui long pour changer l'URL.</p>
+        <p class="hint">Nouvel essai automatique toutes les 15 s.<br>Appui long pour changer l'URL.</p>
+        ${if (url.isBlank()) "" else "<script>setTimeout(function(){ location.replace(" + JSONObject.quote(url) + "); }, 15000);</script>"}
         """.trimIndent()
     )
 
