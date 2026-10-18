@@ -174,7 +174,7 @@ Environnement : JDK 17, Gradle 8.9, AGP 8.5, Kotlin 1.9. `minSdk 24`, `targetSdk
 | Élément            | Où                                                        |
 |--------------------|----------------------------------------------------------|
 | Nom de l'app       | `app/src/main/res/values/strings.xml` → `app_name`       |
-| Icône              | `app/src/main/res/drawable/ic_launcher.xml` (VectorDrawable) |
+| Icône              | `icon/Symbole_Couleur.png` (source) → `res/mipmap-*/` (icône adaptative, fond `@color/ic_launcher_background`) |
 | Paquet             | `applicationId` dans `app/build.gradle.kts` + `namespace` (⚠️ à répercuter dans l'action d'intent DataWedge) |
 | Action d'intent    | `scanAction` dans `MainActivity.kt`                       |
 
