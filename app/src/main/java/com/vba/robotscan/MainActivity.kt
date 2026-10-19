@@ -218,8 +218,9 @@ class MainActivity : Activity() {
         webView.addJavascriptInterface(WebAppBridge(), "Android")
 
         // Appui long n'importe où → changer l'URL du site (mémorisée, sans rebuild).
+        // Protégé par un code (BuildConfig.URL_PIN) pour que l'utilisateur final ne le change pas.
         webView.setOnLongClickListener {
-            showUrlDialog()
+            askPinThenShowUrlDialog()
             true
         }
 
@@ -231,6 +232,32 @@ class MainActivity : Activity() {
             webView.loadDataWithBaseURL("about:welcome", welcomeHtml(), "text/html", "UTF-8", null)
             showUrlDialog()
         }
+    }
+
+    /**
+     * Demande le code avant d'ouvrir le dialogue de changement d'URL. Sans code
+     * configuré au build (BuildConfig.URL_PIN vide), on ouvre directement.
+     */
+    private fun askPinThenShowUrlDialog() {
+        val pin = BuildConfig.URL_PIN
+        if (pin.isEmpty()) return showUrlDialog()
+        val input = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
+            hint = "Code"
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Code d'accès")
+            .setMessage("Saisis le code pour modifier l'URL du site.")
+            .setView(input)
+            .setPositiveButton("Valider") { _, _ ->
+                if (input.text.toString() == pin) {
+                    showUrlDialog()
+                } else {
+                    Toast.makeText(this, "Code incorrect", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Annuler", null)
+            .show()
     }
 
     /** Boîte de dialogue pour saisir/changer l'URL (au clavier ou par scan d'un QR). */

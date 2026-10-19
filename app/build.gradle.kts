@@ -13,6 +13,16 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+
+        // Code demandé avant de changer l'URL. Fourni par le secret GitHub URL_PIN
+        // (le dépôt est public : il ne doit jamais être écrit dans le code).
+        // Vide → aucun code demandé.
+        val urlPin = (System.getenv("URL_PIN") ?: "").filter { it.isLetterOrDigit() }
+        buildConfigField("String", "URL_PIN", "\"$urlPin\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     signingConfigs {

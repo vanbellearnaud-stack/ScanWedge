@@ -57,10 +57,13 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          URL_PIN: ${{ secrets.URL_PIN }}
         run: gradle assembleRelease --no-daemon --stacktrace
 
       - name: Build debug (signature non encore configurée)
         if: steps.sign.outputs.enabled != 'true'
+        env:
+          URL_PIN: ${{ secrets.URL_PIN }}
         run: gradle assembleDebug --no-daemon --stacktrace
 
       - name: Localiser l'APK produit

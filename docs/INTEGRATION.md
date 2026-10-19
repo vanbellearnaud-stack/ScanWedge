@@ -138,7 +138,11 @@ Extras d'intent lus par RobotScan : `com.symbol.datawedge.data_string` (→ `dat
 - **Appui long** sur l'écran → dialogue « URL du site » (saisie **validée** puis
   **mémorisée** dans les préférences). Le même APK sert donc pour n'importe quel site,
   sans reconstruire.
-- **Premier lancement** sans URL → page d'accueil + dialogue de saisie direct.
+- **Code d'accès** : l'appui long demande d'abord un code (`BuildConfig.URL_PIN`), injecté au
+  build depuis le secret GitHub **`URL_PIN`** — jamais écrit dans le dépôt (public). Secret absent
+  → pas de code. C'est une protection contre les manipulations, pas un coffre-fort : le code
+  reste lisible dans un APK décompilé.
+- **Premier lancement** sans URL → page d'accueil + dialogue de saisie direct (sans code).
 - **Par QR code** : dialogue ouvert → **gâchette** sur un QR contenant l'URL → le champ
   se remplit tout seul (le scan est capté par le dialogue, pas transmis à la page).
   ⚠️ Nécessite le **décodeur QR Code activé** dans le profil DataWedge.
