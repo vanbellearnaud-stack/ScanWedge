@@ -63,13 +63,13 @@ Points importants :
 
 ### Bouton Retour (optionnel)
 
-Le bouton Retour du terminal revient à la page précédente du site, puis met l'app en
-arrière-plan. Une page à une seule URL (SPA, fenêtres modales…) peut l'intercepter :
+Le bouton Retour du terminal est **bloqué** : il ne revient pas en arrière et ne fait
+pas quitter l'app. La page peut toutefois s'en servir pour elle-même (fermer une
+fenêtre, revenir à l'écran précédent d'une SPA…) en définissant :
 
 ```js
 window.onBackButton = function () {
-  if (fenetreOuverte) { fermerFenetre(); return true; } // géré par la page
-  return false;                                         // comportement par défaut
+  if (fenetreOuverte) fermerFenetre();   // sinon : rien ne se passe
 };
 ```
 

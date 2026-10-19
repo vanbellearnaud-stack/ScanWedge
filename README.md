@@ -10,7 +10,8 @@ Wrapper Android **générique** qui héberge n'importe quelle appli web dans une
   administrateur (URL, recharger, vider le cache, reconfigurer DataWedge, à propos).
   Le même APK sert donc pour n'importe quel site, sans rebuild.
 - **DataWedge se configure tout seul** au premier lancement (profil `RobotScan`).
-- **Bouton Retour** : page précédente du site (ou hook `window.onBackButton`).
+- **Bouton Retour bloqué** (pas de retour arrière ni de sortie) ; la page peut l'utiliser
+  via le hook `window.onBackButton`.
 
 > 📖 **Intégrer sa propre app web** : voir [`docs/INTEGRATION.md`](docs/INTEGRATION.md)
 > (contrat `window.onScan`, décodage GS1, config DataWedge, build, rebrand, offline).

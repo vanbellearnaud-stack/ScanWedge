@@ -484,24 +484,16 @@ class MainActivity : Activity() {
     // ── Bouton Retour ──
 
     /**
-     * Retour : la page peut le gérer elle-même (fermer une fenêtre…) via
-     * window.onBackButton() renvoyant true ; sinon page précédente du site ;
-     * sinon l'app passe en arrière-plan (sans être détruite → reprise instantanée).
+     * Retour BLOQUÉ : ni page précédente, ni sortie de l'app. Seule exception, la page
+     * peut l'utiliser pour elle-même (fermer une fenêtre…) en définissant
+     * window.onBackButton() — sa valeur de retour n'a pas d'effet côté app.
      */
-    @Suppress("OVERRIDE_DEPRECATION")
+    @Suppress("OVERRIDE_DEPRECATION", "MissingSuperCall")
     override fun onBackPressed() {
-        if (!pageReady) return goBackInHistoryOrLeave()
+        if (!pageReady) return
         webView.evaluateJavascript(
-            "(function(){try{return !!(window.onBackButton && window.onBackButton()===true);}catch(e){return false;}})()"
-        ) { result -> if (result != "true") goBackInHistoryOrLeave() }
-    }
-
-    /** Page précédente du site (en sautant nos pages internes about:), sinon arrière-plan. */
-    private fun goBackInHistoryOrLeave() {
-        val history = webView.copyBackForwardList()
-        var i = history.currentIndex - 1
-        while (i >= 0 && !isHttp(history.getItemAtIndex(i)?.url)) i--
-        if (i >= 0) webView.goBackOrForward(i - history.currentIndex) else moveTaskToBack(true)
+            "(function(){try{window.onBackButton && window.onBackButton();}catch(e){}})()", null
+        )
     }
 
     private fun showErrorPage() {
