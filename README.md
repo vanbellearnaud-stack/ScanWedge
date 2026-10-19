@@ -6,8 +6,11 @@ Wrapper Android **générique** qui héberge n'importe quelle appli web dans une
 
 - Nom affiché de l'app : **RobotScan** · paquet : `com.vba.robotscan`
   (c'est lui qu'on associe dans le profil DataWedge).
-- **URL modifiable à chaud** : appui long sur l'écran → saisie de l'URL (mémorisée),
-  donc le même APK sert pour n'importe quel site, sans rebuild.
+- **URL modifiable à chaud** : **3 doigts sur l'écran** → code d'accès → menu
+  administrateur (URL, recharger, vider le cache, reconfigurer DataWedge, à propos).
+  Le même APK sert donc pour n'importe quel site, sans rebuild.
+- **DataWedge se configure tout seul** au premier lancement (profil `RobotScan`).
+- **Bouton Retour** : page précédente du site (ou hook `window.onBackButton`).
 
 > 📖 **Intégrer sa propre app web** : voir [`docs/INTEGRATION.md`](docs/INTEGRATION.md)
 > (contrat `window.onScan`, décodage GS1, config DataWedge, build, rebrand, offline).
@@ -37,8 +40,8 @@ app/src/main/
 
 Détails techniques :
 - `MainActivity` charge l'URL **saisie et mémorisée** (aucune URL en dur). Au premier
-  lancement sans URL configurée → page d'accueil + dialogue de saisie. Appui long à tout
-  moment pour changer l'URL. Nécessite la permission `INTERNET`.
+  lancement sans URL configurée → page d'accueil + dialogue de saisie. Ensuite, 3 doigts
+  sur l'écran + code pour le menu administrateur. Nécessite la permission `INTERNET`.
 - **Robustesse** : URL validée (`URLUtil`), page de repli « Réessayer » en cas d'échec
   réseau (`onReceivedError`), et **file d'attente des scans** tant que la page n'est pas
   chargée (`pageReady` / `pendingScans`, vidée dans `onPageFinished`) → aucun scan perdu.
@@ -105,7 +108,11 @@ debuggable) :
 
 ## Configurer DataWedge (profil Intent → Broadcast)
 
-Dans l'appli **DataWedge** du TC22 :
+**Automatique** : au premier lancement, RobotScan crée/règle lui-même le profil
+`RobotScan` via l'API DataWedge (`SET_CONFIG`). En cas de doute : menu administrateur →
+« Reconfigurer DataWedge ». La procédure manuelle ci-dessous ne sert qu'en secours.
+
+Dans l'appli **DataWedge** du terminal :
 
 1. **⋮ → Nouveau profil** (*New profile*) → `RobotScan`.
 2. **Applications associées** (*Associated apps*) → **Nouvelle application/activité**

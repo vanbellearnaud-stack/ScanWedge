@@ -61,6 +61,18 @@ Points importants :
 </body></html>
 ```
 
+### Bouton Retour (optionnel)
+
+Le bouton Retour du terminal revient à la page précédente du site, puis met l'app en
+arrière-plan. Une page à une seule URL (SPA, fenêtres modales…) peut l'intercepter :
+
+```js
+window.onBackButton = function () {
+  if (fenetreOuverte) { fermerFenetre(); return true; } // géré par la page
+  return false;                                         // comportement par défaut
+};
+```
+
 ### Pont JS → natif (optionnel)
 
 Un objet `Android` est exposé pour logguer côté logcat :
@@ -114,7 +126,12 @@ function parseGs1(raw) {
 
 ## 3. Configurer le terminal (DataWedge)
 
-Dans l'appli **DataWedge** du terminal, crée un profil :
+**Automatique** : au premier lancement, RobotScan envoie à DataWedge un `SET_CONFIG`
+(`com.symbol.datawedge.api.ACTION`) qui crée/règle le profil **`RobotScan`** exactement
+comme ci-dessous, décodeur QR compris. Il ne le refait que si DataWedge n'a pas confirmé
+(ou depuis le menu administrateur → « Reconfigurer DataWedge », qui affiche le résultat).
+
+Configuration équivalente, à faire à la main seulement en secours :
 
 1. **Applications associées** → paquet **`com.vba.robotscan`**, activité `*`.
 2. **Entrée code-barres** : activée. Décodeurs voulus (EAN-13, Code 128/39, Data
@@ -135,10 +152,12 @@ Extras d'intent lus par RobotScan : `com.symbol.datawedge.data_string` (→ `dat
 
 ## 4. Configurer l'URL du site
 
-- **Appui long** sur l'écran → dialogue « URL du site » (saisie **validée** puis
-  **mémorisée** dans les préférences). Le même APK sert donc pour n'importe quel site,
-  sans reconstruire.
-- **Code d'accès** : l'appui long demande d'abord un code (`BuildConfig.URL_PIN`), injecté au
+- **3 doigts sur l'écran** → code d'accès → **menu administrateur** : changer l'URL,
+  recharger la page, vider le cache (HTTP seulement, données de la page conservées),
+  reconfigurer DataWedge, à propos. L'URL saisie est **validée** puis **mémorisée** : le
+  même APK sert pour n'importe quel site, sans reconstruire. (L'appui long reste libre
+  pour le copier-coller dans les champs de la page.)
+- **Code d'accès** : le menu demande d'abord un code (`BuildConfig.URL_PIN`), injecté au
   build depuis le secret GitHub **`URL_PIN`** — jamais écrit dans le dépôt (public). Secret absent
   → pas de code. C'est une protection contre les manipulations, pas un coffre-fort : le code
   reste lisible dans un APK décompilé.
@@ -207,7 +226,7 @@ La WebView s'appuie sur l'**Android System WebView** (Chromium) du terminal :
 - **File d'attente des scans** : un scan reçu avant `onPageFinished` est bufferisé et
   rejoué → aucun scan perdu au démarrage.
 - **Erreur réseau** : si l'URL est injoignable → page de repli « Réessayer »
-  (appui long pour changer l'URL). Ne s'affiche pas si le service worker sert la page
+  (3 doigts sur l'écran pour l'administration). Ne s'affiche pas si le service worker sert la page
   depuis le cache.
 - **Validation d'URL** avant chargement.
 

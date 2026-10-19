@@ -16,6 +16,8 @@ import android.os.Bundle
 import android.os.Parcelable
 import android.provider.MediaStore
 import android.text.InputType
+import android.util.Log
+import android.view.MotionEvent
 import android.webkit.URLUtil
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -37,6 +39,9 @@ import java.io.File
  *
  * Robustesse : URL validée, page de repli en cas d'échec réseau, et file d'attente
  * des scans tant que la page n'est pas chargée (aucun scan perdu au démarrage).
+ *
+ * Administration (URL, rechargement, cache, DataWedge) : toucher l'écran avec 3 doigts,
+ * puis code d'accès. Le profil DataWedge est créé/réglé automatiquement au 1er lancement.
  */
 class MainActivity : Activity() {
 
@@ -46,7 +51,7 @@ class MainActivity : Activity() {
     // (Sortie Intent, mode Broadcast, Intent action = com.vba.robotscan.SCAN).
     private val scanAction = "com.vba.robotscan.SCAN"
 
-    // URL chargée par la WebView, mémorisée et modifiable à chaud (appui long).
+    // URL chargée par la WebView, mémorisée et modifiable à chaud (menu administrateur).
     private val prefs by lazy { getSharedPreferences("robotscan", MODE_PRIVATE) }
     private fun configuredUrl(): String? = prefs.getString("start_url", null)?.takeIf { it.isNotBlank() }
 
@@ -65,12 +70,27 @@ class MainActivity : Activity() {
     // au lieu d'être transmis à la page web.
     private var urlInput: EditText? = null
 
+    // Geste d'ouverture du menu administrateur (anti-rebond).
+    private var lastAdminGesture = 0L
+
+    // ── Configuration automatique de DataWedge (API Intent de Zebra) ──
+    private val dwApiAction = "com.symbol.datawedge.api.ACTION"
+    private val dwResultAction = "com.symbol.datawedge.api.RESULT_ACTION"
+    private val dwCommandId = "robotscan_setconfig"
+    private val dwProfileName = "RobotScan"
+    private val dwConfigVersion = 1      // à incrémenter si la config ci-dessous change
+    private var dwManualRequest = false  // true si demandé depuis le menu (on affiche le résultat)
+
     private val scanReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            if (intent.action != scanAction) return
-            val data = intent.getStringExtra("com.symbol.datawedge.data_string") ?: return
-            val type = intent.getStringExtra("com.symbol.datawedge.label_type") ?: ""
-            handleScan(data, type)
+            when (intent.action) {
+                scanAction -> {
+                    val data = intent.getStringExtra("com.symbol.datawedge.data_string") ?: return
+                    val type = intent.getStringExtra("com.symbol.datawedge.label_type") ?: ""
+                    handleScan(data, type)
+                }
+                dwResultAction -> onDataWedgeResult(intent)
+            }
         }
     }
 
@@ -199,7 +219,7 @@ class MainActivity : Activity() {
         rappel?.onReceiveValue(resultat)
     }
 
-    @SuppressLint("SetJavaScriptEnabled")
+    @SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -217,11 +237,18 @@ class MainActivity : Activity() {
         webView.webChromeClient = chromeClient   // l'appareil photo des champs <input type="file"> (voir onShowFileChooser)
         webView.addJavascriptInterface(WebAppBridge(), "Android")
 
-        // Appui long n'importe où → changer l'URL du site (mémorisée, sans rebuild).
-        // Protégé par un code (BuildConfig.URL_PIN) pour que l'utilisateur final ne le change pas.
-        webView.setOnLongClickListener {
-            askPinThenShowUrlDialog()
-            true
+        // Menu administrateur : toucher l'écran avec 3 doigts. Geste volontaire qui ne gêne
+        // pas la page (l'appui long reste libre pour le copier-coller dans ses champs).
+        // On ne consomme pas l'événement : la page reçoit ses touches normalement.
+        webView.setOnTouchListener { _, e ->
+            if (e.actionMasked == MotionEvent.ACTION_POINTER_DOWN && e.pointerCount >= 3) {
+                val now = System.currentTimeMillis()
+                if (now - lastAdminGesture > 1500) {
+                    lastAdminGesture = now
+                    openAdmin()
+                }
+            }
+            false
         }
 
         val url = configuredUrl()
@@ -234,29 +261,85 @@ class MainActivity : Activity() {
         }
     }
 
+    /** Geste administrateur : sans URL configurée → saisie directe ; sinon code puis menu. */
+    private fun openAdmin() {
+        if (configuredUrl() == null) return showUrlDialog()
+        askPinThen { showAdminMenu() }
+    }
+
     /**
-     * Demande le code avant d'ouvrir le dialogue de changement d'URL. Sans code
-     * configuré au build (BuildConfig.URL_PIN vide), on ouvre directement.
+     * Demande le code d'accès (BuildConfig.URL_PIN, injecté au build depuis le secret
+     * GitHub URL_PIN) puis exécute [action]. Sans code configuré, exécute directement.
      */
-    private fun askPinThenShowUrlDialog() {
+    private fun askPinThen(action: () -> Unit) {
         val pin = BuildConfig.URL_PIN
-        if (pin.isEmpty()) return showUrlDialog()
+        if (pin.isEmpty()) return action()
         val input = EditText(this).apply {
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
             hint = "Code"
         }
         AlertDialog.Builder(this)
             .setTitle("Code d'accès")
-            .setMessage("Saisis le code pour modifier l'URL du site.")
+            .setMessage("Saisis le code administrateur.")
             .setView(input)
             .setPositiveButton("Valider") { _, _ ->
                 if (input.text.toString() == pin) {
-                    showUrlDialog()
+                    action()
                 } else {
                     Toast.makeText(this, "Code incorrect", Toast.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton("Annuler", null)
+            .show()
+    }
+
+    /** Menu administrateur (après le code). */
+    private fun showAdminMenu() {
+        val items = arrayOf(
+            "Changer l'URL du site",
+            "Recharger la page",
+            "Vider le cache et recharger",
+            "Reconfigurer DataWedge",
+            "À propos"
+        )
+        AlertDialog.Builder(this)
+            .setTitle("RobotScan — administration")
+            .setItems(items) { _, which ->
+                when (which) {
+                    0 -> showUrlDialog()
+                    1 -> reloadSite()
+                    2 -> {
+                        // Cache HTTP seulement : les données de la page (IndexedDB, file de
+                        // sorties hors-ligne…) sont conservées.
+                        webView.clearCache(true)
+                        reloadSite()
+                        Toast.makeText(this, "Cache vidé (données de la page conservées)", Toast.LENGTH_SHORT).show()
+                    }
+                    3 -> configureDataWedge(manual = true)
+                    4 -> showAbout()
+                }
+            }
+            .setNegativeButton("Fermer", null)
+            .show()
+    }
+
+    private fun reloadSite() {
+        val url = configuredUrl() ?: return showUrlDialog()
+        autoRetries = 0
+        if (!onErrorPage && isHttp(webView.url)) webView.reload() else webView.loadUrl(url)
+    }
+
+    private fun showAbout() {
+        AlertDialog.Builder(this)
+            .setTitle("À propos")
+            .setMessage(
+                "RobotScan ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})\n" +
+                "Paquet : $packageName\n" +
+                "Profil DataWedge : $dwProfileName\n" +
+                "Action scan : $scanAction\n\n" +
+                "URL : ${configuredUrl() ?: "—"}"
+            )
+            .setPositiveButton("OK", null)
             .show()
     }
 
@@ -314,6 +397,113 @@ class MainActivity : Activity() {
         }
     }
 
+    // ── DataWedge : création/réglage automatique du profil ──
+
+    /** Une seule fois par version de config (re-tenté tant que DataWedge n'a pas confirmé). */
+    private fun maybeConfigureDataWedge() {
+        if (prefs.getInt("dw_config_version", 0) >= dwConfigVersion) return
+        configureDataWedge(manual = false)
+    }
+
+    /**
+     * Envoie à DataWedge un SET_CONFIG qui crée (si besoin) le profil « RobotScan » :
+     * associé à cette app, scanner activé avec les décodeurs utiles (EAN, Code 128/39,
+     * Data Matrix, GS1 DataMatrix, QR), sortie Intent en broadcast vers [scanAction],
+     * frappe clavier désactivée. Sans DataWedge (terminal non Zebra), rien ne se passe.
+     */
+    private fun configureDataWedge(manual: Boolean) {
+        dwManualRequest = manual
+        val barcode = Bundle().apply {
+            putString("PLUGIN_NAME", "BARCODE")
+            putString("RESET_CONFIG", "false")   // on garde les autres réglages éventuels
+            putBundle("PARAM_LIST", Bundle().apply {
+                putString("scanner_selection", "auto")
+                putString("scanner_input_enabled", "true")
+                listOf(
+                    "decoder_ean13", "decoder_ean8", "decoder_upca", "decoder_code128",
+                    "decoder_code39", "decoder_datamatrix", "decoder_gs1_datamatrix", "decoder_qrcode"
+                ).forEach { putString(it, "true") }
+            })
+        }
+        val intentOutput = Bundle().apply {
+            putString("PLUGIN_NAME", "INTENT")
+            putString("RESET_CONFIG", "true")
+            putBundle("PARAM_LIST", Bundle().apply {
+                putString("intent_output_enabled", "true")
+                putString("intent_action", scanAction)
+                putString("intent_category", Intent.CATEGORY_DEFAULT)
+                putString("intent_delivery", "2")   // 2 = Broadcast
+            })
+        }
+        val keystroke = Bundle().apply {
+            putString("PLUGIN_NAME", "KEYSTROKE")
+            putString("RESET_CONFIG", "true")
+            putBundle("PARAM_LIST", Bundle().apply { putString("keystroke_output_enabled", "false") })
+        }
+        val profile = Bundle().apply {
+            putString("PROFILE_NAME", dwProfileName)
+            putString("PROFILE_ENABLED", "true")
+            putString("CONFIG_MODE", "CREATE_IF_NOT_EXIST")
+            putParcelableArray("APP_LIST", arrayOf<Parcelable>(Bundle().apply {
+                putString("PACKAGE_NAME", packageName)
+                putStringArray("ACTIVITY_LIST", arrayOf("*"))
+            }))
+            putParcelableArrayList("PLUGIN_CONFIG", arrayListOf(barcode, intentOutput, keystroke))
+        }
+        sendBroadcast(Intent(dwApiAction).apply {
+            putExtra("com.symbol.datawedge.api.SET_CONFIG", profile)
+            putExtra("SEND_RESULT", "COMPLETE_RESULT")
+            putExtra("COMMAND_IDENTIFIER", dwCommandId)
+        })
+        if (manual) Toast.makeText(this, "Configuration DataWedge envoyée…", Toast.LENGTH_SHORT).show()
+    }
+
+    /** Résultat du SET_CONFIG renvoyé par DataWedge. */
+    @Suppress("DEPRECATION")
+    private fun onDataWedgeResult(intent: Intent) {
+        if (intent.getStringExtra("COMMAND_IDENTIFIER") != dwCommandId) return
+        val details = ArrayList<String>()
+        val list = intent.extras?.getParcelableArrayList<Bundle>("RESULT_LIST")
+        list?.forEach { b ->
+            if (b.getString("RESULT") != "SUCCESS") {
+                details += listOfNotNull(b.getString("PLUGIN_NAME"), b.getString("RESULT_CODE")).joinToString(" ")
+            }
+        }
+        intent.getBundleExtra("RESULT_INFO")?.getString("RESULT_CODE")?.let { details += it }
+        val ok = intent.getStringExtra("RESULT") == "SUCCESS" || (list != null && details.isEmpty())
+        Log.d("RobotScan/dw", "SET_CONFIG ok=$ok details=$details")
+        if (ok) prefs.edit().putInt("dw_config_version", dwConfigVersion).apply()
+        if (dwManualRequest || !ok) {
+            val msg = if (ok) "Profil DataWedge « $dwProfileName » configuré"
+                      else "DataWedge : configuration incomplète (${details.joinToString(", ").ifBlank { "erreur" }})"
+            Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+        }
+        dwManualRequest = false
+    }
+
+    // ── Bouton Retour ──
+
+    /**
+     * Retour : la page peut le gérer elle-même (fermer une fenêtre…) via
+     * window.onBackButton() renvoyant true ; sinon page précédente du site ;
+     * sinon l'app passe en arrière-plan (sans être détruite → reprise instantanée).
+     */
+    @Suppress("OVERRIDE_DEPRECATION")
+    override fun onBackPressed() {
+        if (!pageReady) return goBackInHistoryOrLeave()
+        webView.evaluateJavascript(
+            "(function(){try{return !!(window.onBackButton && window.onBackButton()===true);}catch(e){return false;}})()"
+        ) { result -> if (result != "true") goBackInHistoryOrLeave() }
+    }
+
+    /** Page précédente du site (en sautant nos pages internes about:), sinon arrière-plan. */
+    private fun goBackInHistoryOrLeave() {
+        val history = webView.copyBackForwardList()
+        var i = history.currentIndex - 1
+        while (i >= 0 && !isHttp(history.getItemAtIndex(i)?.url)) i--
+        if (i >= 0) webView.goBackOrForward(i - history.currentIndex) else moveTaskToBack(true)
+    }
+
     private fun showErrorPage() {
         webView.loadDataWithBaseURL("about:error", errorHtml(configuredUrl() ?: ""), "text/html", "UTF-8", null)
     }
@@ -351,7 +541,7 @@ class MainActivity : Activity() {
         <div class="ico">🤖</div>
         <h1>RobotScan</h1>
         <p>Aucun site configuré.</p>
-        <p class="hint">Appui long sur l'écran pour saisir l'URL du site.</p>
+        <p class="hint">Touche l'écran avec 3 doigts pour saisir l'URL du site.</p>
         """.trimIndent()
     )
 
@@ -370,7 +560,7 @@ class MainActivity : Activity() {
         <h1>Connexion impossible</h1>
         <p class="url">${url.ifBlank { "—" }}</p>
         <a class="btn" href="${url.ifBlank { "about:welcome" }}">Réessayer</a>
-        <p class="hint">Nouvel essai automatique toutes les 15 s.<br>Appui long pour changer l'URL.</p>
+        <p class="hint">Nouvel essai automatique toutes les 15 s.<br>3 doigts sur l'écran : administration.</p>
         ${if (url.isBlank()) "" else "<script>setTimeout(function(){ location.replace(" + JSONObject.quote(url) + "); }, 15000);</script>"}
         """.trimIndent()
     )
@@ -379,6 +569,7 @@ class MainActivity : Activity() {
         super.onResume()
         val filter = IntentFilter().apply {
             addAction(scanAction)
+            addAction(dwResultAction)   // résultats de la configuration automatique DataWedge
             addCategory(Intent.CATEGORY_DEFAULT)
         }
         // Le broadcast vient d'une autre appli (DataWedge) → receiver EXPORTED sur Android 13+.
@@ -388,6 +579,7 @@ class MainActivity : Activity() {
             @Suppress("UnspecifiedRegisterReceiverFlag")
             registerReceiver(scanReceiver, filter)
         }
+        maybeConfigureDataWedge()   // après l'enregistrement, pour recevoir le résultat
     }
 
     override fun onPause() {
