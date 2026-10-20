@@ -11,8 +11,11 @@ android {
         applicationId = "com.vba.robotscan"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        // Numéro de build automatique = numéro du run GitHub Actions (GITHUB_RUN_NUMBER,
+        // croissant) ; 1 en build local. Visible dans le menu admin → « À propos ».
+        val buildNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
+        versionCode = buildNumber
+        versionName = "1.0.$buildNumber"
 
         // Code demandé avant de changer l'URL. Fourni par le secret GitHub URL_PIN
         // (le dépôt est public : il ne doit jamais être écrit dans le code).
